@@ -8,12 +8,13 @@ from dateutil import parser
 import time
 
 from openerp import api, fields, models
+from openerp.osv import fields as osvfields
 
-evaluation_360_list = []
+EVALUATIOON_360_LIST = []
 
 
 def evaluation_360(evaluation_func):
-    evaluation_360_list.append(evaluation_func)
+    EVALUATIOON_360_LIST.append(evaluation_func)
     return evaluation_360
 
 
@@ -28,10 +29,31 @@ class HrEvaluationPlanPhase(models.Model):
         ]
     )
 
+# class HrEvaluationInterview(models.Model):
+#     _inherit = 'hr.evaluation.interview'
+#     _columns = {
+#         #'request_id': fields.many2one('survey.user_input', 'Survey Request', ondelete='cascade', readonly=True),
+#         #'evaluation_id': fields.many2one('hr_evaluation.evaluation', 'Appraisal Plan', required=True),
+#         #'phase_id': fields.many2one('hr_evaluation.plan.phase', 'Appraisal Phase', required=True),
+# #        'user_to_review_id': fields.related('evaluation_id', 'employee_id', type="many2one", relation="res.users", string="Employee to evaluate"),
+#         #'user_id': fields.many2one('res.users', 'Interviewer'),
+#         #'state': fields.selection([('draft', "Draft"),
+#         #                           ('waiting_answer', "In progress"),
+#         #                           ('done', "Done"),
+#         #                           ('cancel', "Cancelled")],
+#         #                          string="State", required=True, copy=False),
+#         #'survey_id': fields.related('phase_id', 'survey_id', string="Appraisal Form", type="many2one", relation="survey.survey"),
+#         #'deadline': fields.related('request_id', 'deadline', type="datetime", string="Deadline"),
+#     }
+
 
 class HrEvaluationEvaluation(models.Model):
 
     _inherit = 'hr_evaluation.evaluation'
+
+    #_columns = {
+    #    'employee_id': osvfields.many2one('res.users', "User", required=True)
+    #}
 
     @evaluation_360
     def _get_360_evaluation_child(self, evaluation):
@@ -54,6 +76,10 @@ class HrEvaluationEvaluation(models.Model):
 
     @api.multi
     def button_plan_in_progress(self):
+        """
+        TODO: Docstring
+        :return:
+        """
         hr_eval_inter_obj = self.env['hr.evaluation.interview']
         for evaluation in self:
             wait = False
@@ -62,8 +88,9 @@ class HrEvaluationEvaluation(models.Model):
                     return super(HrEvaluationEvaluation,
                                  self).button_plan_in_progress()
 
+                #children = self.env['res.users']
                 children = self.env['hr.employee']
-                for item in evaluation_360_list:
+                for item in EVALUATIOON_360_LIST:
                     children |= item(self, evaluation)
 
                 for child in children:
