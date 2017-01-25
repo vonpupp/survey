@@ -88,7 +88,8 @@ Images
 Contributors
 ------------
 
-* Luis Felipe Miléo <mileo@kmee.com.br>>
+* Luis Felipe Miléo <mileo@kmee.com.br>
+* Albert De La Fuente <vonpupp@gmail.com>
 
 Maintainer
 ----------

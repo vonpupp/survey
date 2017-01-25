@@ -29,6 +29,14 @@ class HrEvaluationPlanPhase(models.Model):
         ]
     )
 
+class HrEvaluationPlan(models.Model):
+
+    _inherit = "hr_evaluation.plan"
+
+    #_columns = {
+    #    'deadline': fields.Date('Deadline')
+    #}
+
 # class HrEvaluationInterview(models.Model):
 #     _inherit = 'hr.evaluation.interview'
 #     _columns = {
@@ -57,22 +65,26 @@ class HrEvaluationEvaluation(models.Model):
 
     @evaluation_360
     def _get_360_evaluation_child(self, evaluation):
-        return evaluation.employee_id.child_ids
+        return evaluation.employee_id.child_ids.user_id
 
     @evaluation_360
     def _get_360_evaluation_parent(self, evaluation):
-        return evaluation.employee_id.parent_id
+        return evaluation.employee_id.parent_id.user_id
 
     @evaluation_360
     def _get_360_evaluation_myself(self, evaluation):
-        return evaluation.employee_id
+        return evaluation.employee_id.user_id
 
     @evaluation_360
     def _get_360_evaluation_department(self, evaluation):
-        return self.env['hr.employee'].search(
+        employee_ids = self.env['hr.employee'].search(
             [('department_id', '=',
               evaluation.employee_id.department_id.id)]
         )
+        res_users = self.env['res.users']
+        for item in employee_ids:
+            res_users |= item.user_id
+        return res_users
 
     @api.multi
     def button_plan_in_progress(self):
@@ -80,53 +92,57 @@ class HrEvaluationEvaluation(models.Model):
         TODO: Docstring
         :return:
         """
+        super(HrEvaluationEvaluation, self).button_plan_in_progress()
         hr_eval_inter_obj = self.env['hr.evaluation.interview']
         for evaluation in self:
             wait = False
             for phase in evaluation.plan_id.phase_ids:
-                if phase.action not in ('360', '360-anonymous'):
-                    return super(HrEvaluationEvaluation,
-                                 self).button_plan_in_progress()
+                if phase.action in ('360', '360-anonymous'):
 
-                #children = self.env['res.users']
-                children = self.env['hr.employee']
-                for item in EVALUATIOON_360_LIST:
-                    children |= item(self, evaluation)
+                    children = self.env['res.users']
+                    #children = self.env['hr.employee']
+                    for item in EVALUATIOON_360_LIST:
+                        children |= item(self, evaluation)
 
-                for child in children:
-                    int_id = hr_eval_inter_obj.create({
-                        'evaluation_id': evaluation.id,
-                        'phase_id': phase.id,
-                        'deadline': (
-                            parser.parse(
-                                datetime.now().strftime('%Y-%m-%d')
-                            ) + relativedelta(months=+1)).strftime(
-                            '%Y-%m-%d'),
-                        'user_id': child.user_id.id,
-                    })
-                    if phase.wait:
-                        wait = True
-                    if not wait:
-                        int_id.survey_req_waiting_answer()
+                    #import ipdb; ipdb.set_trace()
+                    #import pudb; pudb.set_trace()
+                    #import pudb; pudb.remote.set_trace(term_size=(80, 24))
+                    #import rpudb; rpudb.set_trace(addr='0.0.0.0', port=4444)
+                    #import epdb; epdb.serve()
+                    for child in children:
+                        int_id = hr_eval_inter_obj.create({
+                            'evaluation_id': evaluation.id,
+                            'phase_id': phase.id,
+                            'deadline': (
+                                parser.parse(
+                                    datetime.now().strftime('%Y-%m-%d')
+                                ) + relativedelta(months=+1)).strftime(
+                                '%Y-%m-%d'),
+                            'user_id': child.user_id.id,
+                        })
+                        if phase.wait:
+                            wait = True
+                        if not wait:
+                            int_id.survey_req_waiting_answer()
 
-                    if (not wait) and phase.mail_feature:
-                        body = phase.mail_body % {
-                            'employee_name': child.name,
-                            'user_signature': child.user_id.signature,
-                            'eval_name': phase.survey_id.title,
-                            'date': time.strftime('%Y-%m-%d'),
-                            'time': time,
-                        }
-                        sub = phase.email_subject
-                        if child.work_email:
-                            vals = {
-                                'state': 'outgoing',
-                                'subject': sub,
-                                'body_html': '<pre>%s</pre>' % body,
-                                'email_to': child.work_email,
-                                'email_from': evaluation.employee_id.work_email
+                        if (not wait) and phase.mail_feature:
+                            body = phase.mail_body % {
+                                'employee_name': child.name,
+                                'user_signature': child.user_id.signature,
+                                'eval_name': phase.survey_id.title,
+                                'date': time.strftime('%Y-%m-%d'),
+                                'time': time,
                             }
-                            self.env['mail.mail'].create(vals)
+                            sub = phase.email_subject
+                            if child.work_email:
+                                vals = {
+                                    'state': 'outgoing',
+                                    'subject': sub,
+                                    'body_html': '<pre>%s</pre>' % body,
+                                    'email_to': child.work_email,
+                                    'email_from': evaluation.employee_id.work_email
+                                }
+                                self.env['mail.mail'].create(vals)
         self.write({'state': 'wait'})
 
 
@@ -134,11 +150,21 @@ class HrEvaluationInterview(models.Model):
 
     _inherit = 'hr.evaluation.interview'
 
+# Esse e o ponto 6
     @api.constrains('state')
     def _check_state_done(self):
         for item in self.sudo():
             if (item.state == 'done' and
                     item.phase_id.action == '360-anonymous'):
-                item.user_id = False
-                item.request_id.partner_id = False
-                item.request_id.email = False
+                item.write({'user_id': False,
+                            'request_id.partner_id': False,
+                            'request_id.email': False})
+
+# Se o entrevistador for o entrevistado nao apagar o usuario
+#def write(self, vals)
+#  if vals.get('state') == 'done':
+#      # se retornar relacional
+#      vals.get('phase_id') == '360-anonymous'
+#
+#      item da entrevista:
+#    item.etrevistador('res.users') == entrevistado('res.partner'):
