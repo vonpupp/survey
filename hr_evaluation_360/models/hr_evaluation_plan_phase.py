@@ -155,7 +155,14 @@ class HrEvaluationInterview(models.Model):
     def _check_state_done(self):
         for item in self.sudo():
             if (item.state == 'done' and
-                    item.phase_id.action == '360-anonymous'):
+                    item.phase_id.action == '360-anonymous' and
+                    item.create_uid.id != item.user_to_review_id.user_id.id:
+                #import ipdb; ipdb.set_trace()
+                #import pudb; pudb.set_trace()
+                #import pudb; pudb.remote.set_trace(term_size=(80, 24))
+                #import rpudb; rpudb.set_trace(addr='0.0.0.0', port=4444)
+                #import epdb; epdb.serve()
+                import pdb; pdb.set_trace()
                 item.write({'user_id': False,
                             'request_id.partner_id': False,
                             'request_id.email': False})
