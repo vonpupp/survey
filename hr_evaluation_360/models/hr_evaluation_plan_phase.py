@@ -2,13 +2,9 @@
 # Copyright 2016 Luis Felipe Mileo - <mileo@kmee.com.br> - KMEE
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-from dateutil import parser
 import time
 
 from openerp import api, fields, models
-from openerp.osv import fields as osvfields
 
 EVALUATIOON_360_LIST = []
 
@@ -29,39 +25,10 @@ class HrEvaluationPlanPhase(models.Model):
         ]
     )
 
-class HrEvaluationPlan(models.Model):
-
-    _inherit = "hr_evaluation.plan"
-
-    #_columns = {
-    #    'deadline': fields.Date('Deadline')
-    #}
-
-# class HrEvaluationInterview(models.Model):
-#     _inherit = 'hr.evaluation.interview'
-#     _columns = {
-#         #'request_id': fields.many2one('survey.user_input', 'Survey Request', ondelete='cascade', readonly=True),
-#         #'evaluation_id': fields.many2one('hr_evaluation.evaluation', 'Appraisal Plan', required=True),
-#         #'phase_id': fields.many2one('hr_evaluation.plan.phase', 'Appraisal Phase', required=True),
-# #        'user_to_review_id': fields.related('evaluation_id', 'employee_id', type="many2one", relation="res.users", string="Employee to evaluate"),
-#         #'user_id': fields.many2one('res.users', 'Interviewer'),
-#         #'state': fields.selection([('draft', "Draft"),
-#         #                           ('waiting_answer', "In progress"),
-#         #                           ('done', "Done"),
-#         #                           ('cancel', "Cancelled")],
-#         #                          string="State", required=True, copy=False),
-#         #'survey_id': fields.related('phase_id', 'survey_id', string="Appraisal Form", type="many2one", relation="survey.survey"),
-#         #'deadline': fields.related('request_id', 'deadline', type="datetime", string="Deadline"),
-#     }
-
 
 class HrEvaluationEvaluation(models.Model):
 
     _inherit = 'hr_evaluation.evaluation'
-
-    #_columns = {
-    #    'employee_id': osvfields.many2one('res.users', "User", required=True)
-    #}
 
     @evaluation_360
     def _get_360_evaluation_child(self, evaluation):
@@ -99,26 +66,14 @@ class HrEvaluationEvaluation(models.Model):
             for phase in evaluation.plan_id.phase_ids:
                 if phase.action in ('360', '360-anonymous'):
                     children = self.env['res.users']
-                    #children = self.env['hr.employee']
                     for item in EVALUATIOON_360_LIST:
                         children |= item(self, evaluation)
 
-                    #import ipdb; ipdb.set_trace()
-                    #import pudb; pudb.set_trace()
-                    #import pudb; pudb.remote.set_trace(term_size=(80, 24))
-                    #import rpudb; rpudb.set_trace(addr='0.0.0.0', port=4444)
-                    #import epdb; epdb.serve()
                     for child in children:
-                        import ipdb; ipdb.set_trace() # BREAKPOINT
                         int_id = hr_eval_inter_obj.create({
                             'evaluation_id': evaluation.id,
                             'phase_id': phase.id,
                             'deadline': evaluation.date,
-                            #'deadline': (
-                            #    parser.parse(
-                            #        datetime.now().strftime('%Y-%m-%d')
-                            #    ) + relativedelta(months=+1)).strftime(
-                            #    '%Y-%m-%d'),
                             'user_id': child.id,
                         })
                         if phase.wait:
@@ -141,7 +96,8 @@ class HrEvaluationEvaluation(models.Model):
                                     'subject': sub,
                                     'body_html': '<pre>%s</pre>' % body,
                                     'email_to': child.work_email,
-                                    'email_from': evaluation.employee_id.work_email
+                                    'email_from':
+                                        evaluation.employee_id.work_email
                                 }
                                 self.env['mail.mail'].create(vals)
         self.write({'state': 'wait'})
@@ -151,27 +107,19 @@ class HrEvaluationInterview(models.Model):
 
     _inherit = 'hr.evaluation.interview'
 
-# Esse e o ponto 6
     @api.constrains('state')
     def _check_state_done(self):
         for item in self.sudo():
             if (item.state == 'done' and
-                    item.phase_id.action == '360-anonymous'):
-                if item.create_uid.id != item.user_to_review_id.user_id.id:
-                    import ipdb; ipdb.set_trace()
-                    item.write({'user_id': False,
-                                'request_id.partner_id': False,
-                                'request_id.email': False})
-                else:
-                    import ipdb; ipdb.set_trace()
-                    #import ipdb; ipdb.set_trace()
-                    #import pudb; pudb.set_trace()
-                    #import pudb; pudb.remote.set_trace(term_size=(80, 24))
-                    #import rpudb; rpudb.set_trace(addr='0.0.0.0', port=4444)
-                    #import epdb; epdb.serve()
+                    item.phase_id.action == '360-anonymous' and
+                    item.create_uid.id != item.user_to_review_id.user_id.id):
+                # Anonymize data
+                item.write({'user_id': False,
+                            'request_id.partner_id': False,
+                            'request_id.email': False})
 
 # Se o entrevistador for o entrevistado nao apagar o usuario
-#def write(self, vals)
+# def write(self, vals)
 #  if vals.get('state') == 'done':
 #      # se retornar relacional
 #      vals.get('phase_id') == '360-anonymous'
