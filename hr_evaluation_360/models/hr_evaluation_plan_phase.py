@@ -98,7 +98,6 @@ class HrEvaluationEvaluation(models.Model):
             wait = False
             for phase in evaluation.plan_id.phase_ids:
                 if phase.action in ('360', '360-anonymous'):
-
                     children = self.env['res.users']
                     #children = self.env['hr.employee']
                     for item in EVALUATIOON_360_LIST:
@@ -110,15 +109,17 @@ class HrEvaluationEvaluation(models.Model):
                     #import rpudb; rpudb.set_trace(addr='0.0.0.0', port=4444)
                     #import epdb; epdb.serve()
                     for child in children:
+                        import ipdb; ipdb.set_trace() # BREAKPOINT
                         int_id = hr_eval_inter_obj.create({
                             'evaluation_id': evaluation.id,
                             'phase_id': phase.id,
-                            'deadline': (
-                                parser.parse(
-                                    datetime.now().strftime('%Y-%m-%d')
-                                ) + relativedelta(months=+1)).strftime(
-                                '%Y-%m-%d'),
-                            'user_id': child.user_id.id,
+                            'deadline': evaluation.date,
+                            #'deadline': (
+                            #    parser.parse(
+                            #        datetime.now().strftime('%Y-%m-%d')
+                            #    ) + relativedelta(months=+1)).strftime(
+                            #    '%Y-%m-%d'),
+                            'user_id': child.id,
                         })
                         if phase.wait:
                             wait = True
@@ -155,17 +156,19 @@ class HrEvaluationInterview(models.Model):
     def _check_state_done(self):
         for item in self.sudo():
             if (item.state == 'done' and
-                    item.phase_id.action == '360-anonymous' and
-                    item.create_uid.id != item.user_to_review_id.user_id.id:
-                #import ipdb; ipdb.set_trace()
-                #import pudb; pudb.set_trace()
-                #import pudb; pudb.remote.set_trace(term_size=(80, 24))
-                #import rpudb; rpudb.set_trace(addr='0.0.0.0', port=4444)
-                #import epdb; epdb.serve()
-                import pdb; pdb.set_trace()
-                item.write({'user_id': False,
-                            'request_id.partner_id': False,
-                            'request_id.email': False})
+                    item.phase_id.action == '360-anonymous'):
+                if item.create_uid.id != item.user_to_review_id.user_id.id:
+                    import ipdb; ipdb.set_trace()
+                    item.write({'user_id': False,
+                                'request_id.partner_id': False,
+                                'request_id.email': False})
+                else:
+                    import ipdb; ipdb.set_trace()
+                    #import ipdb; ipdb.set_trace()
+                    #import pudb; pudb.set_trace()
+                    #import pudb; pudb.remote.set_trace(term_size=(80, 24))
+                    #import rpudb; rpudb.set_trace(addr='0.0.0.0', port=4444)
+                    #import epdb; epdb.serve()
 
 # Se o entrevistador for o entrevistado nao apagar o usuario
 #def write(self, vals)
