@@ -118,7 +118,15 @@ class HrEvaluationInterview(models.Model):
                             'request_id.partner_id': False,
                             'request_id.email': False})
 
-# Se o entrevistador for o entrevistado nao apagar o usuario
+    #@api.multi
+    #def write(self, vals):
+    #    res = super(HrEvaluationInterview, self).write(vals)
+    #    import ipdb; ipdb.set_trace() # BREAKPOINT
+    #    if vals.get('state') == 'done':
+    #        # se retornar relacional
+    #        if vals.get('phase_id') == '360-anonymous':
+    #            pass
+
 # def write(self, vals)
 #  if vals.get('state') == 'done':
 #      # se retornar relacional
